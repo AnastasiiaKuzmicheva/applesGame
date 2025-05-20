@@ -36,7 +36,9 @@ namespace ApplesGame
 		game.score = 0;
 		game.isGameFinished = false;
 		game.timeSinceGameFinish = 0;
-		game.score = 0;
+
+		game.scoreText.setString("Score: " + std::to_string(game.score));
+		
 	}
 
 	void UpdatePlayingState(Game& game, float deltaTime)
@@ -105,6 +107,7 @@ namespace ApplesGame
 
 	void StartGameoverState(Game& game)
 	{
+		game.score = 0;
 		game.isGameFinished = true;
 		game.timeSinceGameFinish = 0.f;
 		game.gameOverSound.play();
@@ -148,6 +151,14 @@ namespace ApplesGame
 		game.startText.setFillColor(sf::Color::White);
 		game.startText.setPosition(SCREEN_WIDTH / 2.f, SCREEN_HEIGHT / 2.f + 50.f);
 		CenterText(game.startText);
+
+		//настройки
+		game.settingsText.setFont(game.font);
+		game.settingsText.setString("Settings (S)");
+		game.settingsText.setCharacterSize(24);
+		game.settingsText.setFillColor(sf::Color::White);
+		game.settingsText.setPosition(SCREEN_WIDTH / 2.f, SCREEN_HEIGHT / 2.f + 100.f);  // Ниже кнопки "Start Game"
+		CenterText(game.settingsText);
 
 
 		// Init game objects
@@ -215,26 +226,79 @@ namespace ApplesGame
 		text.setOrigin(bounds.width / 2, bounds.height / 2);
 	}
 
+	void HandleMainMenuInput(Game& game)
+	{
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
+		{
+			game.isInMainMenu = false;  // Начинаем игру
+		}
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+		{
+			game.isInSettingsMenu = true;  // Переходим в меню настроек
+		}
+	}
 
 	void UpdateGame(Game& game, float deltaTime)
 	{
 
 		if (game.isInMainMenu)
 		{
-			return; // Выходим из функции, ничего не обновляем
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
+			{
+				game.isInMainMenu = false; //start game
+				StartPlayingState(game);
+			}
+			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+			{
+				game.isInMainMenu = false;
+				game.isInSettingsMenu = true;
+			}
 		}
-
-		// Update game state
-		if (!game.isGameFinished)
+		else if (game.isInSettingsMenu)
 		{
-			UpdatePlayingState(game, deltaTime);
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::B))
+			{
+				game.isInSettingsMenu = false;
+				game.isInMainMenu = true; // Возвращаемся в главное меню
+			}
 		}
 		else
 		{
-			UpdateGameoverState(game, deltaTime);
+			// Update game state
+			if (!game.isGameFinished)
+			{
+				UpdatePlayingState(game, deltaTime);
+			}
+			else
+			{
+				UpdateGameoverState(game, deltaTime);
+			}
 		}
-
 		
+	}
+
+
+	void DrawSettingsMenu(Game& game, sf::RenderWindow& window)
+	{
+		window.clear();
+
+		// Заголовок
+		sf::Text settingsTitle;
+		settingsTitle.setFont(game.font);
+		settingsTitle.setString("Settings");
+		settingsTitle.setCharacterSize(48);
+		settingsTitle.setPosition(SCREEN_WIDTH / 2.f, 100.f);
+		CenterText(settingsTitle);
+		window.draw(settingsTitle);
+
+		// Кнопка "Назад"
+		sf::Text backText;
+		backText.setFont(game.font);
+		backText.setString("Back to Menu (B)");
+		backText.setCharacterSize(24);
+		backText.setPosition(SCREEN_WIDTH / 2.f, SCREEN_HEIGHT - 100.f);
+		CenterText(backText);
+		window.draw(backText);
 	}
 
 	void DrawGame(Game& game, sf::RenderWindow& window)
@@ -245,6 +309,11 @@ namespace ApplesGame
 			// Рисуем только меню
 			window.draw(game.titleText);
 			window.draw(game.startText);
+			window.draw(game.settingsText);
+		}
+		else if (game.isInSettingsMenu)
+		{
+			DrawSettingsMenu(game, window);
 		}
 		else
 		{

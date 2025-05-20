@@ -24,6 +24,8 @@ namespace ApplesGame
 		bool isGameFinished = false;
 		bool isGamePaused = false;
 		float timeSinceGameFinish = 0.f;
+		bool isInMainMenu = true;
+		bool isInSettingsMenu = false;
 
 		// Resources
 		sf::Texture playerTexture;
@@ -45,18 +47,20 @@ namespace ApplesGame
 		sf::Text gameOverText;
 
 		//МЕНЮ
-		bool isInMainMenu = true; // Добавляем флаг меню
+		 // Добавляем флаг меню
 		sf::Text titleText;       // Текст "Apples Game"
 		sf::Text startText;       // Текст "Начать игру (Enter)"
+		sf::Text settingsText;  // Новая кнопка "Настройки"
 
 
 	};
 
 	void InitGame(Game& game);
 	void UpdateGame(Game& game, float deltaTime);
-	void DrawGame(Game& game, sf::RenderWindow& window);
-	void DeinializeGame(Game& game);
+	
 
+	void HandleMainMenuInput(Game& game);
+	void DrawSettingsMenu(Game& game, sf::RenderWindow& window);
 
 	void CenterText(sf::Text& text);
 
@@ -66,4 +70,7 @@ namespace ApplesGame
 
 	void StartGameoverState(Game& game);
 	void UpdateGameoverState(Game& game, float deltaTime);
+
+	void DrawGame(Game& game, sf::RenderWindow& window);
+	void DeinializeGame(Game& game);
 }

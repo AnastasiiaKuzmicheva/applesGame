@@ -50,8 +50,12 @@ int main()
 			}
 			if (game.isInMainMenu && event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Enter) 
 			{
-				game.isInMainMenu = false;
+			game.isInMainMenu = false;
 				StartPlayingState(game); // Запускаем игру
+			}
+			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+			{
+				game.isInSettingsMenu = true;  // Переходим в меню настроек
 			}
 		}
 
