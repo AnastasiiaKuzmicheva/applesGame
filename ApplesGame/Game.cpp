@@ -10,23 +10,31 @@ namespace ApplesGame
 		SetPlayerSpeed(game.player, INITIAL_SPEED);
 		SetPlayerDirection(game.player, PlayerDirection::Right);
 
-			
-			if (game.apples != nullptr) 
-			{
-				delete[] game.apples;
-				game.apples = nullptr;
-			}
-
-			game.applesCount = 20 + rand() % 30;
-			game.apples = new Apple[game.applesCount];
+		if (game.apples != nullptr)
+		{
+			delete[] game.apples;
+			game.apples = nullptr;
+		}
 
 		// Init apples
+		int appleCount = NUM_APPLES;
+		if (game.gameMode & MODE_50_APPLES)
+		{
+			appleCount = NUM_APPLES_EXTENDED;
+		}
+		
+		
+
+		game.applesCount = appleCount;
+		game.apples = new Apple[game.applesCount];
+
 		for (int i = 0; i < game.applesCount; ++i)
 		{
 			InitApple(game.apples[i], game);
 			SetApplePosition(game.apples[i], GetRandomPositionInRectangle(game.screenRect));
 		}
-
+		
+		
 		// Init rocks
 		for (int i = 0; i < NUM_ROCKS; ++i)
 		{
@@ -36,9 +44,7 @@ namespace ApplesGame
 		game.score = 0;
 		game.isGameFinished = false;
 		game.timeSinceGameFinish = 0;
-
 		game.scoreText.setString("Score: " + std::to_string(game.score));
-		
 	}
 
 	void UpdatePlayingState(Game& game, float deltaTime)
@@ -76,18 +82,71 @@ namespace ApplesGame
 
 		UpdatePlayer(game.player, deltaTime);
 
+		int appleCount;
+		if (game.gameMode & MODE_50_APPLES)
+		{
+			appleCount = NUM_APPLES_EXTENDED;
+		}
+		else
+		{
+			appleCount = NUM_APPLES;
+		}
+
 		// Find player collisions with apples
 		for (int i = 0; i < game.applesCount; ++i)
 		{
 			if (DoShapesCollide(GetPlayerCollider(game.player), GetAppleCollider(game.apples[i])))
 			{
-				SetApplePosition(game.apples[i], GetRandomPositionInRectangle(game.screenRect));
 				++game.score;
-				SetPlayerSpeed(game.player, GetPlayerSpeed(game.player) + ACCELERATION);
 				game.eatAppleSound.play();
+
+				if (!(game.gameMode & MODE_NO_ACCELERATION))
+				{
+					SetPlayerSpeed(game.player, GetPlayerSpeed(game.player) + ACCELERATION);
+					if (game.player.speed > MAX_SPEED)
+						game.player.speed = MAX_SPEED;
+				}
+				if (game.gameMode & MODE_INFINITE_APPLES)
+				{
+					SetApplePosition(game.apples[i], GetRandomPositionInRectangle(game.screenRect));
+				}
+				else
+				{
+					//  убираем яблоко за экран или помечаем как "съеденное"
+					SetApplePosition(game.apples[i], { -100, -100 }); // скрываем яблоко
+				}
 				game.scoreText.setString("Score: " + std::to_string(game.score));
 			}
 		}
+
+		int targetApples;
+		if (game.gameMode & MODE_50_APPLES)
+		{
+			targetApples = NUM_APPLES_EXTENDED;
+		}
+		else
+		{
+			targetApples = NUM_APPLES;
+		}
+		if (!(game.gameMode & MODE_INFINITE_APPLES) && game.score >= targetApples)
+		{
+			game.isGameFinished = true;
+			game.timeSinceGameFinish = 0.f;
+		}
+
+
+		/*if (game.isGameFinished && (game.gameMode & MODE_INFINITE_APPLES))
+
+		{
+			for (auto& rec : leaderboard)
+			{
+				if (rec.name == "Player" && game.score > rec.score)
+				{
+					rec.score = game.score;
+				}
+			}
+			SortLeaderboard(leaderboard);
+		}*/
 
 		// Find player collisions with rocks
 		for (int i = 0; i < NUM_ROCKS; ++i)
@@ -119,10 +178,10 @@ namespace ApplesGame
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
 		{
 			// Сбрасываем фон и начинаем новую игру
-	
+
 			StartPlayingState(game);
 		}
-		
+
 	}
 
 	void InitGame(Game& game)
@@ -134,7 +193,6 @@ namespace ApplesGame
 		assert(game.eatAppleSoundBuffer.loadFromFile(RESOURCES_PATH + "\\AppleEat.wav"));
 		assert(game.gameOverSoundBuffer.loadFromFile(RESOURCES_PATH + "\\Death.wav"));
 		assert(game.font.loadFromFile(RESOURCES_PATH + "\\Fonts\\Roboto-Regular.ttf"));
-
 
 		// ИНИЦИАЛИЗАЦИЯ МЕНЮ
 		game.titleText.setFont(game.font);
@@ -160,16 +218,18 @@ namespace ApplesGame
 		game.settingsText.setPosition(SCREEN_WIDTH / 2.f, SCREEN_HEIGHT / 2.f + 100.f);  // Ниже кнопки "Start Game"
 		CenterText(game.settingsText);
 
-
 		// Init game objects
 		game.screenRect = { 0.f, 0.f, SCREEN_WIDTH, SCREEN_HEIGHT };
 
 		InitPlayer(game.player, game);
 
 		// Init apples
+		game.applesCount = 0;
+		game.apples = new Apple[game.applesCount]; // Выделяем память
 		for (int i = 0; i < game.applesCount; ++i)
 		{
 			InitApple(game.apples[i], game);
+			SetApplePosition(game.apples[i], GetRandomPositionInRectangle(game.screenRect));
 		}
 
 		// Init rocks
@@ -214,9 +274,7 @@ namespace ApplesGame
 		game.gameOverText.setPosition(SCREEN_WIDTH / 2.f, SCREEN_HEIGHT / 2.f - 50.f);
 		CenterText(game.gameOverText);
 
-
-
-		StartPlayingState(game);
+		
 	}
 
 
@@ -230,13 +288,17 @@ namespace ApplesGame
 	{
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
 		{
-			game.isInMainMenu = false;  // Начинаем игру
+			game.isInMainMenu = false; // Начинаем игру
+			
 		}
 		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
 		{
+			game.isInMainMenu = false;
 			game.isInSettingsMenu = true;  // Переходим в меню настроек
 		}
 	}
+
+	
 
 	void UpdateGame(Game& game, float deltaTime)
 	{
@@ -262,6 +324,7 @@ namespace ApplesGame
 				game.isInMainMenu = true; // Возвращаемся в главное меню
 			}
 		}
+		
 		else
 		{
 			// Update game state
@@ -274,9 +337,50 @@ namespace ApplesGame
 				UpdateGameoverState(game, deltaTime);
 			}
 		}
-		
+
 	}
 
+	void HandleGameModeMenuInput(Game& game, sf::Event event)
+	{
+		if (event.type == sf::Event::KeyPressed && game.isInSettingsMenu)
+		{
+			switch (event.key.code)
+			{
+			case sf::Keyboard::Num1: // Стандартный режим (20 яблок с ускорением)
+				game.gameMode = MODE_DEFAULT;
+				break;
+
+			case sf::Keyboard::Num2: // Бесконечные яблоки с ускорением
+				game.gameMode = MODE_INFINITE_APPLES;
+			
+				break;
+
+			case sf::Keyboard::Num3: // 20 яблок без ускорения
+				game.gameMode = MODE_NO_ACCELERATION;
+				
+				break;
+
+			case sf::Keyboard::Num4: // Бесконечные яблоки без ускорения
+				game.gameMode = MODE_INFINITE_APPLES | MODE_NO_ACCELERATION;
+				
+				break;
+
+			case sf::Keyboard::Num5:
+				game.gameMode = MODE_50_APPLES; // Только 50 яблок
+			
+				break;
+
+			case sf::Keyboard::B:
+				game.isInSettingsMenu = false;
+				game.isInMainMenu = true;
+				break;
+			}
+			
+			game.isInSettingsMenu = false;
+			StartPlayingState(game);
+		}
+	}
+	
 
 	void DrawSettingsMenu(Game& game, sf::RenderWindow& window)
 	{
@@ -287,16 +391,66 @@ namespace ApplesGame
 		settingsTitle.setFont(game.font);
 		settingsTitle.setString("Settings");
 		settingsTitle.setCharacterSize(48);
-		settingsTitle.setPosition(SCREEN_WIDTH / 2.f, 100.f);
+		settingsTitle.setPosition(SCREEN_WIDTH / 2.f, 50.f);
 		CenterText(settingsTitle);
 		window.draw(settingsTitle);
+
+		sf::Text title;
+		title.setFont(game.font);
+		title.setString("Select Game Mode");
+		title.setCharacterSize(40);
+		title.setFillColor(sf::Color::White);
+		title.setPosition(SCREEN_WIDTH / 2.f, 100.f);
+		CenterText(title);
+		window.draw(title);
+
+		sf::Text mode1;
+		mode1.setFont(game.font);
+		mode1.setString("1.20 apples with acceleration ");
+		mode1.setCharacterSize(24);
+		mode1.setPosition(SCREEN_WIDTH / 2.f, 200.f);
+		CenterText(mode1);
+		window.draw(mode1);
+
+		sf::Text mode2;
+		mode2.setFont(game.font);
+		mode2.setString("2. Infinite apples with acceleration");
+		mode2.setCharacterSize(24);
+		mode2.setPosition(SCREEN_WIDTH / 2.f, 250.f);
+		CenterText(mode2);
+		window.draw(mode2);
+
+		sf::Text mode3;
+		mode3.setFont(game.font);
+		mode3.setString("3. 20 apples without acceleration");
+		mode3.setCharacterSize(24);
+		mode3.setPosition(SCREEN_WIDTH / 2.f, 300.f);
+		CenterText(mode3);
+		window.draw(mode3);
+
+		sf::Text mode4;
+		mode4.setFont(game.font);
+		mode4.setString("4. Infinite apples without acceleration");
+		mode4.setCharacterSize(24);
+		mode4.setPosition(SCREEN_WIDTH / 2.f, 350.f);
+		CenterText(mode4);
+		window.draw(mode4);
+
+		sf::Text mode5;
+		mode5.setFont(game.font);
+		mode5.setString("5. 50 apples with acceleration");
+		mode5.setCharacterSize(24);
+		mode5.setPosition(SCREEN_WIDTH / 2.f, 400.f);
+		CenterText(mode5);
+		window.draw(mode5);
+
 
 		// Кнопка "Назад"
 		sf::Text backText;
 		backText.setFont(game.font);
 		backText.setString("Back to Menu (B)");
 		backText.setCharacterSize(24);
-		backText.setPosition(SCREEN_WIDTH / 2.f, SCREEN_HEIGHT - 100.f);
+		backText.setPosition(SCREEN_WIDTH / 2.f, SCREEN_HEIGHT - 450.f);
 		CenterText(backText);
 		window.draw(backText);
 	}
@@ -319,10 +473,14 @@ namespace ApplesGame
 		{
 			// Draw game objects
 			DrawPlayer(game.player, window);
+
+			
 			for (int i = 0; i < game.applesCount; ++i)
 			{
 				DrawApple(game.apples[i], window);
 			}
+
+			
 
 			for (int i = 0; i < NUM_ROCKS; ++i)
 			{
