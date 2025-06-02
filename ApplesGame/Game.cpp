@@ -274,7 +274,7 @@ namespace ApplesGame
 		game.gameOverText.setPosition(SCREEN_WIDTH / 2.f, SCREEN_HEIGHT / 2.f - 50.f);
 		CenterText(game.gameOverText);
 
-		
+		HandleGameModeMenuInput;
 	}
 
 
@@ -300,7 +300,7 @@ namespace ApplesGame
 
 	
 
-	void UpdateGame(Game& game, float deltaTime)
+	void UpdateGame(Game& game, float deltaTime, sf::Event event)
 	{
 
 		if (game.isInMainMenu)
@@ -318,6 +318,7 @@ namespace ApplesGame
 		}
 		else if (game.isInSettingsMenu)
 		{
+			HandleGameModeMenuInput(game, event);
 			if (sf::Keyboard::isKeyPressed(sf::Keyboard::B))
 			{
 				game.isInSettingsMenu = false;
@@ -342,7 +343,7 @@ namespace ApplesGame
 
 	void HandleGameModeMenuInput(Game& game, sf::Event event)
 	{
-		if (event.type == sf::Event::KeyPressed && game.isInSettingsMenu)
+		if (game.isInSettingsMenu)
 		{
 			switch (event.key.code)
 			{
@@ -352,22 +353,18 @@ namespace ApplesGame
 
 			case sf::Keyboard::Num2: // Ѕесконечные €блоки с ускорением
 				game.gameMode = MODE_INFINITE_APPLES;
-			
 				break;
 
 			case sf::Keyboard::Num3: // 20 €блок без ускорени€
 				game.gameMode = MODE_NO_ACCELERATION;
-				
 				break;
 
 			case sf::Keyboard::Num4: // Ѕесконечные €блоки без ускорени€
 				game.gameMode = MODE_INFINITE_APPLES | MODE_NO_ACCELERATION;
-				
 				break;
 
 			case sf::Keyboard::Num5:
 				game.gameMode = MODE_50_APPLES; // “олько 50 €блок
-			
 				break;
 
 			case sf::Keyboard::B:
@@ -375,9 +372,6 @@ namespace ApplesGame
 				game.isInMainMenu = true;
 				break;
 			}
-			
-			game.isInSettingsMenu = false;
-			StartPlayingState(game);
 		}
 	}
 	

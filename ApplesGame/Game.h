@@ -55,7 +55,7 @@ namespace ApplesGame
 	};
 
 	void InitGame(Game& game);
-	void UpdateGame(Game& game, float deltaTime);
+	void UpdateGame(Game& game, float deltaTime, sf::Event event);
 	void HandleMainMenuInput(Game& game);
 	void DrawSettingsMenu(Game& game, sf::RenderWindow& window);
 	void CenterText(sf::Text& text);

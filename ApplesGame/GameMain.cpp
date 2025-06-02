@@ -47,7 +47,7 @@ int main()
 			}
 		}
 
-		UpdateGame(game, deltaTime);
+		UpdateGame(game, deltaTime, event);
 
 		// Draw game
 		window.clear();
