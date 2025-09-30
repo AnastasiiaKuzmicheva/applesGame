@@ -8,7 +8,6 @@ namespace ApplesGame
         {"Bob",85},
         {"Carol",60},
         {"Dave",40},
-        {"Dima",40},
         {"Player",0}
     };
     void SortLeaderboard(std::vector<Record>& records)
@@ -23,6 +22,5 @@ namespace ApplesGame
                 }
             }
         }
-
     }
 }
