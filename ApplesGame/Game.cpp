@@ -1,189 +1,11 @@
 #include "Game.h"
 #include <cassert>
 #include <SFML/Graphics.hpp>
+#include "Record.h"
+#include <sstream>
 
 namespace ApplesGame
 {
-	void StartPlayingState(Game& game)
-	{
-		SetPlayerPosition(game.player, { SCREEN_WIDTH / 2.f, SCREEN_HEIGHT / 2.f });
-		SetPlayerSpeed(game.player, INITIAL_SPEED);
-		SetPlayerDirection(game.player, PlayerDirection::Right);
-
-		if (game.apples != nullptr)
-		{
-			delete[] game.apples;
-			game.apples = nullptr;
-		}
-
-		// Init apples
-		int appleCount = NUM_APPLES;
-		if (game.gameMode & MODE_50_APPLES)
-		{
-			appleCount = NUM_APPLES_EXTENDED;
-		}
-		
-		
-
-		game.applesCount = appleCount;
-		game.apples = new Apple[game.applesCount];
-
-		for (int i = 0; i < game.applesCount; ++i)
-		{
-			InitApple(game.apples[i], game);
-			SetApplePosition(game.apples[i], GetRandomPositionInRectangle(game.screenRect));
-		}
-		
-		
-		// Init rocks
-		for (int i = 0; i < NUM_ROCKS; ++i)
-		{
-			SetRockPosition(game.rocks[i], GetRandomPositionInRectangle(game.screenRect));
-		}
-
-		game.score = 0;
-		game.isGameFinished = false;
-		game.timeSinceGameFinish = 0;
-		game.scoreText.setString("Score: " + std::to_string(game.score));
-	}
-
-	void UpdatePlayingState(Game& game, float deltaTime)
-	{
-		// Проверка на паузу
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::P))
-		{
-			game.isGamePaused = !game.isGamePaused; // Переключаем состояние паузы
-			sf::sleep(sf::milliseconds(200)); // Добавляем задержку, чтобы избежать множественных срабатываний
-		}
-
-		// Если игра на паузе, не обновляем игровую логику
-		if (game.isGamePaused)
-		{
-			return;
-		}
-
-		// Handle input
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::D))
-		{
-			SetPlayerDirection(game.player, PlayerDirection::Right);
-		}
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::W))
-		{
-			SetPlayerDirection(game.player, PlayerDirection::Up);
-		}
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::A))
-		{
-			SetPlayerDirection(game.player, PlayerDirection::Left);
-		}
-		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::S))
-		{
-			SetPlayerDirection(game.player, PlayerDirection::Down);
-		}
-
-		UpdatePlayer(game.player, deltaTime);
-
-		int appleCount;
-		if (game.gameMode & MODE_50_APPLES)
-		{
-			appleCount = NUM_APPLES_EXTENDED;
-		}
-		else
-		{
-			appleCount = NUM_APPLES;
-		}
-
-		// Find player collisions with apples
-		for (int i = 0; i < game.applesCount; ++i)
-		{
-			if (DoShapesCollide(GetPlayerCollider(game.player), GetAppleCollider(game.apples[i])))
-			{
-				++game.score;
-				game.eatAppleSound.play();
-
-				if (!(game.gameMode & MODE_NO_ACCELERATION))
-				{
-					SetPlayerSpeed(game.player, GetPlayerSpeed(game.player) + ACCELERATION);
-					if (game.player.speed > MAX_SPEED)
-						game.player.speed = MAX_SPEED;
-				}
-				if (game.gameMode & MODE_INFINITE_APPLES)
-				{
-					SetApplePosition(game.apples[i], GetRandomPositionInRectangle(game.screenRect));
-				}
-				else
-				{
-					//  убираем яблоко за экран или помечаем как "съеденное"
-					SetApplePosition(game.apples[i], { -100, -100 }); // скрываем яблоко
-				}
-				game.scoreText.setString("Score: " + std::to_string(game.score));
-			}
-		}
-
-		int targetApples;
-		if (game.gameMode & MODE_50_APPLES)
-		{
-			targetApples = NUM_APPLES_EXTENDED;
-		}
-		else
-		{
-			targetApples = NUM_APPLES;
-		}
-		if (!(game.gameMode & MODE_INFINITE_APPLES) && game.score >= targetApples)
-		{
-			game.isGameFinished = true;
-			game.timeSinceGameFinish = 0.f;
-		}
-
-
-		/*if (game.isGameFinished && (game.gameMode & MODE_INFINITE_APPLES))
-
-		{
-			for (auto& rec : leaderboard)
-			{
-				if (rec.name == "Player" && game.score > rec.score)
-				{
-					rec.score = game.score;
-				}
-			}
-			SortLeaderboard(leaderboard);
-		}*/
-
-		// Find player collisions with rocks
-		for (int i = 0; i < NUM_ROCKS; ++i)
-		{
-			if (DoShapesCollide(GetPlayerCollider(game.player), GetRockCollider(game.rocks[i])))
-			{
-				StartGameoverState(game);
-			}
-		}
-
-		// Check screen borders collision
-		if (!DoShapesCollide(GetPlayerCollider(game.player), game.screenRect))
-		{
-			StartGameoverState(game);
-		}
-	}
-
-	void StartGameoverState(Game& game)
-	{
-		game.score = 0;
-		game.isGameFinished = true;
-		game.timeSinceGameFinish = 0.f;
-		game.gameOverSound.play();
-	}
-
-	void UpdateGameoverState(Game& game, float deltaTime)
-	{
-		// Проверяем нажатие клавиши Пробел
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
-		{
-			// Сбрасываем фон и начинаем новую игру
-
-			StartPlayingState(game);
-		}
-
-	}
-
 	void InitGame(Game& game)
 	{
 		// Load resources
@@ -274,8 +96,218 @@ namespace ApplesGame
 		game.gameOverText.setPosition(SCREEN_WIDTH / 2.f, SCREEN_HEIGHT / 2.f - 50.f);
 		CenterText(game.gameOverText);
 
+		game.leadertable.setFont(game.font);
+		game.leadertable.setCharacterSize(24);
+		game.leadertable.setFillColor(sf::Color::White);
+
 		HandleGameModeMenuInput;
 	}
+
+
+
+	void StartPlayingState(Game& game)
+	{
+		SetPlayerPosition(game.player, { SCREEN_WIDTH / 2.f, SCREEN_HEIGHT / 2.f });
+		SetPlayerSpeed(game.player, INITIAL_SPEED);
+		SetPlayerDirection(game.player, PlayerDirection::Right);
+
+		if (game.apples != nullptr)
+		{
+			delete[] game.apples;
+			game.apples = nullptr;
+		}
+
+		// Init apples
+		int appleCount = NUM_APPLES;
+		if (game.gameMode & MODE_50_APPLES)
+		{
+			appleCount = NUM_APPLES_EXTENDED;
+		}
+
+
+
+		game.applesCount = appleCount;
+		game.apples = new Apple[game.applesCount];
+
+		for (int i = 0; i < game.applesCount; ++i)
+		{
+			InitApple(game.apples[i], game);
+			SetApplePosition(game.apples[i], GetRandomPositionInRectangle(game.screenRect));
+		}
+
+
+		// Init rocks
+		for (int i = 0; i < NUM_ROCKS; ++i)
+		{
+			SetRockPosition(game.rocks[i], GetRandomPositionInRectangle(game.screenRect));
+		}
+
+		game.score = 0;
+		game.isGameFinished = false;
+		game.timeSinceGameFinish = 0;
+		game.scoreText.setString("Score: " + std::to_string(game.score));
+	}
+
+	void UpdatePlayingState(Game& game, float deltaTime)
+	{
+
+
+		// Проверка на паузу
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::P))
+		{
+			game.isGamePaused = !game.isGamePaused; // Переключаем состояние паузы
+			sf::sleep(sf::milliseconds(200)); // Добавляем задержку, чтобы избежать множественных срабатываний
+		}
+
+		// Если игра на паузе, не обновляем игровую логику
+		if (game.isGamePaused)
+		{
+			return;
+		}
+
+		// Check screen borders collision
+		if (!DoShapesCollide(GetPlayerCollider(game.player), game.screenRect))
+		{
+			StartGameoverState(game);
+		}
+
+		// Handle input
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+		{
+			SetPlayerDirection(game.player, PlayerDirection::Right);
+		}
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+		{
+			SetPlayerDirection(game.player, PlayerDirection::Up);
+		}
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+		{
+			SetPlayerDirection(game.player, PlayerDirection::Left);
+		}
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+		{
+			SetPlayerDirection(game.player, PlayerDirection::Down);
+		}
+
+		UpdatePlayer(game.player, deltaTime);
+
+		int appleCount;
+		if (game.gameMode & MODE_50_APPLES)
+		{
+			appleCount = NUM_APPLES_EXTENDED;
+		}
+		else
+		{
+			appleCount = NUM_APPLES;
+		}
+
+		// Find player collisions with apples
+		for (int i = 0; i < game.applesCount; ++i)
+		{
+			if (DoShapesCollide(GetPlayerCollider(game.player), GetAppleCollider(game.apples[i])))
+			{
+				++game.score;
+				game.eatAppleSound.play();
+
+				if (!(game.gameMode & MODE_NO_ACCELERATION))
+				{
+					SetPlayerSpeed(game.player, GetPlayerSpeed(game.player) + ACCELERATION);
+					if (game.player.speed > MAX_SPEED)
+						game.player.speed = MAX_SPEED;
+				}
+				if (game.gameMode & MODE_INFINITE_APPLES)
+				{
+					SetApplePosition(game.apples[i], GetRandomPositionInRectangle(game.screenRect));
+				}
+				else
+				{
+					//  убираем яблоко за экран или помечаем как "съеденное"
+					SetApplePosition(game.apples[i], { -100, -100 }); // скрываем яблоко
+				}
+				game.scoreText.setString("Score: " + std::to_string(game.score));
+			}
+		}
+
+
+		int targetApples;
+		if (game.gameMode & MODE_50_APPLES)
+		{
+			targetApples = NUM_APPLES_EXTENDED;
+		}
+		else
+		{
+			targetApples = NUM_APPLES;
+		}
+
+		//win conditions
+		if (!(game.gameMode & MODE_INFINITE_APPLES) && game.score >= targetApples)
+		{
+			game.isGameFinished = true;
+			game.timeSinceGameFinish = 0.f;
+		}
+
+
+		// Find player collisions with rocks
+		for (int i = 0; i < NUM_ROCKS; ++i)
+		{
+			if (DoShapesCollide(GetPlayerCollider(game.player), GetRockCollider(game.rocks[i])))
+			{
+				StartGameoverState(game);
+			}
+		}
+
+
+		if (game.isGameFinished && (game.gameMode & MODE_INFINITE_APPLES))
+
+		{
+			for (auto& rec : leaderboard)
+			{
+				if (rec.name == "Player" && game.score > rec.score)
+				{
+					rec.score = game.score;
+				}
+			}
+			SortLeaderboard(leaderboard);
+		}
+
+
+	}
+
+	void StartGameoverState(Game& game)
+	{
+		// Проверяем, если это бесконечный режим — обновляем рекорд
+		if (game.gameMode & MODE_INFINITE_APPLES)
+		{
+			for (auto& rec : leaderboard)
+			{
+				if (rec.name == "Player" && game.score > rec.score)
+				{
+					rec.score = game.score;
+				}
+			}
+			SortLeaderboard(leaderboard);
+		}
+
+		game.score = 0;
+		game.isGameFinished = true;
+		game.timeSinceGameFinish = 0.f;
+		game.gameOverSound.play();
+
+
+	}
+
+	void UpdateGameoverState(Game& game, float deltaTime)
+	{
+		// Проверяем нажатие клавиши Пробел
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+		{
+			//  back to mainmenu
+
+			game.isInMainMenu = true;
+		}
+
+	}
+
 
 
 	void CenterText(sf::Text& text)
@@ -289,7 +321,7 @@ namespace ApplesGame
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter))
 		{
 			game.isInMainMenu = false; // Начинаем игру
-			
+
 		}
 		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
 		{
@@ -298,7 +330,7 @@ namespace ApplesGame
 		}
 	}
 
-	
+
 
 	void UpdateGame(Game& game, float deltaTime, sf::Event event)
 	{
@@ -325,7 +357,7 @@ namespace ApplesGame
 				game.isInMainMenu = true; // Возвращаемся в главное меню
 			}
 		}
-		
+
 		else
 		{
 			// Update game state
@@ -374,7 +406,7 @@ namespace ApplesGame
 			}
 		}
 	}
-	
+
 
 	void DrawSettingsMenu(Game& game, sf::RenderWindow& window)
 	{
@@ -468,18 +500,32 @@ namespace ApplesGame
 			// Draw game objects
 			DrawPlayer(game.player, window);
 
-			
+
 			for (int i = 0; i < game.applesCount; ++i)
 			{
 				DrawApple(game.apples[i], window);
 			}
 
-			
-
 			for (int i = 0; i < NUM_ROCKS; ++i)
 			{
 				DrawRock(game.rocks[i], window);
 			}
+
+			std::stringstream scoreText;
+			scoreText << "Apples eaten: " << game.score;
+			game.scoreText.setString(scoreText.str());
+			if (!(game.gameMode & MODE_INFINITE_APPLES))
+			{
+				if (game.gameMode & MODE_50_APPLES)
+				{
+					scoreText << " / " << NUM_APPLES_EXTENDED;
+				}
+				else
+				{
+					scoreText << " / " << NUM_APPLES;
+				}
+			}
+
 
 			// Draw texts
 			if (!game.isGameFinished)
@@ -497,6 +543,23 @@ namespace ApplesGame
 			else
 			{
 				window.draw(game.gameOverText);
+
+				float y = 300;// позицию по вертикали
+				int index = 1;// место игрока в списке
+				if (game.isGameFinished && (game.gameMode & MODE_INFINITE_APPLES))
+				{
+					for (const auto& rec : leaderboard)
+					{
+
+						game.leadertable.setPosition(200, y);
+						game.leadertable.setString(std::to_string(index) + ". " + rec.name + " - " + std::to_string(rec.score));
+						window.draw(game.leadertable);
+
+						y += 30;
+						++index;
+					}
+				}
+
 				window.draw(game.scoreText);
 			}
 		}

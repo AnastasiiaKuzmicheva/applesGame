@@ -44,6 +44,7 @@ namespace ApplesGame
 		sf::Text pauseText;
 		sf::Text controlsHintText;
 		sf::Text gameOverText;
+		sf::Text leadertable;
 
 		//МЕНЮ
 		 // Добавляем флаг меню
@@ -51,19 +52,18 @@ namespace ApplesGame
 		sf::Text startText;       // Текст "Начать игру (Enter)"
 		sf::Text settingsText;  // Новая кнопка "Настройки"
 
-		
 	};
 
 	void InitGame(Game& game);
-	void UpdateGame(Game& game, float deltaTime, sf::Event event);
-	void HandleMainMenuInput(Game& game);
-	void DrawSettingsMenu(Game& game, sf::RenderWindow& window);
-	void CenterText(sf::Text& text);
 	void StartPlayingState(Game& game);
 	void UpdatePlayingState(Game& game, float deltaTime);
 	void StartGameoverState(Game& game);
-	void HandleGameModeMenuInput(Game& game, sf::Event event);
 	void UpdateGameoverState(Game& game, float deltaTime);
+	void CenterText(sf::Text& text);
+	void HandleMainMenuInput(Game& game);
+	void UpdateGame(Game& game, float deltaTime, sf::Event event);
+	void HandleGameModeMenuInput(Game& game, sf::Event event);
+	void DrawSettingsMenu(Game& game, sf::RenderWindow& window);
 	void DrawGame(Game& game, sf::RenderWindow& window);
 	void DeinializeGame(Game& game);
 }
